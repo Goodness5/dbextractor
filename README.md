@@ -1,8 +1,8 @@
-# Database Export Tool Documentation
+# Database Data Extractor
 
 ## Overview
 
-The Database Export Tool is a versatile utility designed to connect to various databases, retrieve table or collection data, and export it to CSV or XLSX (Excel) files. It supports PostgreSQL, SQLite, and MongoDB databases (MongoDB support is coming soon).
+The Database Data Extractor is a versatile utility designed to connect to various databases, retrieve table or collection data, and export it to CSV or XLSX (Excel) files. It supports PostgreSQL, SQLite, and MongoDB databases (MongoDB support is coming soon).
 
 ## Features
 
