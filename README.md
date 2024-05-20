@@ -40,7 +40,7 @@ pip install psycopg2 pymongo openpyxl
    - Run the script from the command line:
 
      ```bash
-     python3 export_tool.py
+     python3 main.py
      ```
 
 2. **Enter Database URI:**
