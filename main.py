@@ -55,11 +55,17 @@ def get_table_names(connection):
 
 
 # Function to export data from a selected collection/table to a CSV file
-def export_to_csv(connection, collection_or_table_name, csv_file):
+def export_to_csv(connection, collection_or_table_name, csv_file, query_params):
     cursor = None  # Initialize cursor variable
 
     if isinstance(connection, psycopg2.extensions.connection):
-        query = f"SELECT * FROM public.{collection_or_table_name};"
+        query = f"SELECT * FROM public.{collection_or_table_name}"
+        if query_params:
+            query += " WHERE "
+            conditions = [f"{key} = '{value}'" for key, value in query_params.items()]
+            query += " AND ".join(conditions)
+        query += ";"
+
         cursor = connection.cursor()  # Use the connection's cursor method
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -71,7 +77,13 @@ def export_to_csv(connection, collection_or_table_name, csv_file):
             writer.writerows(rows)
 
     elif isinstance(connection, sqlite3.Connection):
-        query = f"SELECT * FROM {collection_or_table_name};"
+        query = f"SELECT * FROM {collection_or_table_name}"
+        if query_params:
+            query += " WHERE"
+            conditions = [f"{key} = '{value}'" for key, value in query_params.items()]
+            query += " AND ".join(conditions)
+        query += ";"
+
         cursor = connection.cursor()  # Use the connection's cursor method
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -82,8 +94,7 @@ def export_to_csv(connection, collection_or_table_name, csv_file):
             writer.writerow(headers)
             writer.writerows(rows)
 
-
-# TODO: implement support for mongodb
+    # TODO: implement support for mongodb
     # elif isinstance(connection, MongoClient):
     #     cursor = connection[collection_or_table_name].find({})
     #     docs = list(cursor)
@@ -138,7 +149,7 @@ def main():
     # Determine the type of database based on the URI
     if "mongodb" in database_uri:
         # connection = connect_mongodb(database_uri)
-        return "support for mongodb comiing soon"
+        return "support for mongodb coming soon"
     elif "sqlite:" in database_uri:
         connection = connect_sqlite(database_uri)
         
@@ -166,6 +177,15 @@ def main():
 
         table_name = tables[table_index]
 
+        # Prompt the user for query parameters
+        query_params = {}
+        while True:
+            key = input("Enter the column name to filter by (or press Enter to finish): ")
+            if not key:
+                break
+            value = input(f"Enter the value for {key}: ")
+            query_params[key] = value
+
         # Ask the user what type of file they want to export
         file_format = input("Do you want to export to CSV (c) or XLSX (x)? ").lower()
         if file_format not in ["c", "x"]:
@@ -180,10 +200,10 @@ def main():
 
         # Export the selected table/collection to the chosen format
         if file_format == "c":
-            export_to_csv(connection, table_name, output_file)
+            export_to_csv(connection, table_name, output_file, query_params)
         elif file_format == "x":
             csv_temp_file = f"{table_name}_temp.csv"
-            export_to_csv(connection, table_name, csv_temp_file)
+            export_to_csv(connection, table_name, csv_temp_file, query_params)
             convert_csv_to_xlsx(csv_temp_file, output_file)
             os.remove(csv_temp_file)  # Clean up temporary CSV file
         else:
