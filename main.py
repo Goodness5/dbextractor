@@ -2,7 +2,7 @@ import csv
 import os
 import psycopg2
 import sqlite3
-from pymongo import MongoClient
+# from pymongo import MongoClient
 from openpyxl import Workbook
 from urllib.parse import urlparse
 
