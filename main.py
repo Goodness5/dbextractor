@@ -66,7 +66,7 @@ def get_table_names(connection):
 
 # Function to export data from a selected collection/table to a CSV file, excluding exceptions
 def export_to_csv(connection, collection_or_table_name, csv_file, query_params, exception_field=None, exceptions=None):
-    cursor = None  # Initialize cursor variable
+    cursor = None 
 
     if isinstance(connection, psycopg2.extensions.connection):
         query = f"SELECT * FROM public.{collection_or_table_name}"
@@ -125,7 +125,7 @@ def export_to_csv(connection, collection_or_table_name, csv_file, query_params, 
     else:
         raise Exception("Unsupported database type")
 
-    if cursor:  # Check if cursor exists before attempting to close
+    if cursor:  
         cursor.close()  # Close the cursor after use
     print(
         f"Data from collection/table '{collection_or_table_name}' has been successfully exported to {csv_file}"
@@ -159,10 +159,11 @@ def main():
     connection = None
 
     if input_type == "1":
+        # TODO:
         # Allow user to paste a PostgreSQL command
         psql_command = input("Paste your PostgreSQL command: ")
         # Extract connection details from the command (this is a placeholder, implement parsing logic)
-        # connection = parse_psql_command(psql_command)
+        # connection = parse_psql_command(psql_command) 
 
     elif input_type == "2":
         # Basic raw entry of host, user, password, etc.
