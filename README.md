@@ -6,10 +6,15 @@ The Database Data Extractor is a versatile utility designed to connect to variou
 
 ## Features
 
-- **Database Connection:** Connects to PostgreSQL, SQLite, and MongoDB databases.
-- **Data Retrieval:** Retrieves data from specified tables or collections.
-- **Data Export:** Exports data to CSV or XLSX files.
-- **Interactive User Interface:** Prompts users for necessary inputs and guides them through the export process.
+- **Database Connection:** Supports multiple connection methods:
+  - Database URI
+  - Raw connection details
+  - PostgreSQL command (coming soon)
+- **Data Filtering:** 
+  - Filter data using column-based query parameters
+  - Exclude specific records using exceptions (via CSV file or pasted data)
+- **Data Export:** Exports data to CSV or XLSX files
+- **Interactive User Interface:** Guides users through the connection, filtering, and export process
 
 ## Requirements
 
@@ -29,66 +34,43 @@ pip install psycopg2 pymongo openpyxl
 
 ### Connecting to a Database
 
-1. **Database URI:**
+You can connect to the database in multiple ways:
+
+1. **Database URI** (Option 3):
    - PostgreSQL: `postgresql://username:password@host:port/database`
    - SQLite: `sqlite:///path/to/database.db`
-   - MongoDB: `mongodb+srv://username:password@host:port/database` (Support coming soon)
+
+2. **Raw Entry** (Option 2):
+   - Manually enter host, database name, username, and password
+
+3. **PostgreSQL Command** (Option 1 - Coming Soon):
+   - Paste your PostgreSQL connection command
 
 ### Running the Tool
 
 1. **Start the Script:**
-   - Run the script from the command line:
+   ```bash
+   python3 main.py
+   ```
 
-     ```bash
-     python3 main.py
-     ```
-
-2. **Enter Database URI:**
-   - When prompted, enter your database URI. The tool will automatically detect the type of database based on the URI.
+2. **Select Connection Method:**
+   Choose between:
+   - Option 1: PostgreSQL command (coming soon)
+   - Option 2: Raw connection details
+   - Option 3: Database URI
 
 3. **Select Table/Collection:**
-   - The tool will list all available tables (for SQL databases) or collections (for MongoDB). Select the desired table/collection by entering the corresponding number.
+   - Choose from the list of available tables
 
-4. **Choose Export Format:**
-   - Choose between CSV (enter `c`) or XLSX (enter `x`) as the export format.
+4. **Apply Filters (Optional):**
+   - Enter column names and values to filter the data
+   - Specify exclusions by column and provide exceptions via:
+     - CSV file
+     - Pasted data
 
-5. **Export Data:**
-   - The tool will export the data from the selected table/collection to the specified format and save it in the current directory.
-
-### Example Workflow
-
-1. Run the tool:
-
-   ```bash
-   python main.py
-   ```
-
-2. Enter your database URI:
-
-   ```bash
-   Enter your database URI: postgresql://username:password@localhost:5432/mydatabase
-   ```
-
-3. Select a table:
-
-   ```bash
-   Available tables/collections:
-   1. table1
-   2. table2
-   Select a table/collection by number: 1
-   ```
-
-4. Choose the export format:
-
-   ```bash
-   Do you want to export to CSV (c) or XLSX (x)? c
-   ```
-
-5. Export complete:
-
-   ```bash
-   Data from table/collection 'table1' has been successfully exported to table1.csv
-   ```
+5. **Choose Export Format:**
+   - CSV (enter `c`)
+   - XLSX (enter `x`)
 
 ## Functions
 
@@ -110,13 +92,16 @@ pip install psycopg2 pymongo openpyxl
 - **Parameters:** `connection` - Database connection object.
 - **Returns:** List of table/collection names.
 
-### `export_to_csv(connection, collection_or_table_name, csv_file)`
+### `export_to_csv(connection, collection_or_table_name, csv_file, query_params, exception_field, exceptions)`
 
-- **Purpose:** Exports data from the specified table/collection to a CSV file.
+- **Purpose:** Exports filtered data from the specified table/collection to a CSV file
 - **Parameters:**
-  - `connection` - Database connection object.
-  - `collection_or_table_name` (str) - Name of the table/collection to export.
-  - `csv_file` (str) - Path to the output CSV file.
+  - `connection` - Database connection object
+  - `collection_or_table_name` (str) - Name of the table/collection to export
+  - `csv_file` (str) - Path to the output CSV file
+  - `query_params` (dict) - Column-based filters to apply
+  - `exception_field` (str) - Column name for exclusions
+  - `exceptions` (list) - Values to exclude
 
 ### `convert_csv_to_xlsx(csv_file_path, xlsx_file_path)`
 
@@ -124,6 +109,11 @@ pip install psycopg2 pymongo openpyxl
 - **Parameters:**
   - `csv_file_path` (str) - Path to the input CSV file.
   - `xlsx_file_path` (str) - Path to the output XLSX file.
+
+### `read_exceptions_from_csv_or_input()`
+
+- **Purpose:** Reads exception values from either a CSV file or pasted text
+- **Returns:** List of exception values
 
 ### `main()`
 
