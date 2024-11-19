@@ -2,7 +2,6 @@ import csv
 import os
 import psycopg2
 import sqlite3
-# from pymongo import MongoClient
 from openpyxl import Workbook
 from urllib.parse import urlparse
 
@@ -23,102 +22,6 @@ def parse_database_uri(database_uri):
 def connect_sqlite(db_path):
     conn = sqlite3.connect(db_path)
     return conn
-
-
-# Function to connect to a MongoDB database
-# def connect_mongodb(uri):
-#     client = MongoClient(uri)
-#     # db = client["default"]
-#     return client
-
-
-# Function to get table names from the database
-def get_table_names(connection):
-    if isinstance(connection, psycopg2.extensions.connection):
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';"
-        )
-        tables = cursor.fetchall()
-        table_names = [table[0] for table in tables]
-    elif isinstance(connection, sqlite3.Connection):
-        cursor = connection.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        table_names = [table[0] for table in tables]
-    elif isinstance(connection, MongoClient):
-        collections = connection.list_collection_names()
-        table_names = collections
-    else:
-        raise Exception("Unsupported database type")
-    return table_names
-
-
-# Function to export data from a selected collection/table to a CSV file
-def export_to_csv(connection, collection_or_table_name, csv_file, query_params):
-    cursor = None  # Initialize cursor variable
-
-    if isinstance(connection, psycopg2.extensions.connection):
-        query = f"SELECT * FROM public.{collection_or_table_name}"
-        if query_params:
-            query += " WHERE "
-            conditions = [f"{key} = '{value}'" for key, value in query_params.items()]
-            query += " AND ".join(conditions)
-        query += ";"
-
-        cursor = connection.cursor()  # Use the connection's cursor method
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        headers = [desc[0] for desc in cursor.description]
-
-        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-            writer.writerows(rows)
-
-    elif isinstance(connection, sqlite3.Connection):
-        query = f"SELECT * FROM {collection_or_table_name}"
-        if query_params:
-            query += " WHERE"
-            conditions = [f"{key} = '{value}'" for key, value in query_params.items()]
-            query += " AND ".join(conditions)
-        query += ";"
-
-        cursor = connection.cursor()  # Use the connection's cursor method
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        headers = [desc[0] for desc in cursor.description]
-
-        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-            writer.writerows(rows)
-
-    # TODO: implement support for mongodb
-    # elif isinstance(connection, MongoClient):
-    #     cursor = connection[collection_or_table_name].find({})
-    #     docs = list(cursor)
-
-    #     # Collect all unique keys from the documents
-    #     all_fields = set()
-    #     for doc in docs:
-    #         all_fields.update(doc.keys())
-    #     headers = list(all_fields)  # Convert set to list for CSV writing
-
-    #     with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
-    #         writer = csv.DictWriter(file, fieldnames=headers)
-    #         writer.writeheader()
-    #         for doc in docs:
-    #             writer.writerow(doc)
-
-    else:
-        raise Exception("Unsupported database type")
-
-    if cursor:  # Check if cursor exists before attempting to close
-        cursor.close()  # Close the cursor after use
-    print(
-        f"Data from collection/table '{collection_or_table_name}' has been successfully exported to {csv_file}"
-    )
 
 
 def convert_csv_to_xlsx(csv_file_path, xlsx_file_path):
@@ -142,21 +45,142 @@ def convert_csv_to_xlsx(csv_file_path, xlsx_file_path):
     )
 
 
-def main():
-    # Prompt the user for the database URI
-    database_uri = input("Enter your database URI: ")
-
-    # Determine the type of database based on the URI
-    if "mongodb" in database_uri:
-        # connection = connect_mongodb(database_uri)
-        return "support for mongodb coming soon"
-    elif "sqlite:" in database_uri:
-        connection = connect_sqlite(database_uri)
-        
-        # postgres support 
+# Function to get table names from the database
+def get_table_names(connection):
+    if isinstance(connection, psycopg2.extensions.connection):
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';"
+        )
+        tables = cursor.fetchall()
+        table_names = [table[0] for table in tables]
+    elif isinstance(connection, sqlite3.Connection):
+        cursor = connection.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        table_names = [table[0] for table in tables]
     else:
+        raise Exception("Unsupported database type")
+    return table_names
+
+
+# Function to export data from a selected collection/table to a CSV file, excluding exceptions
+def export_to_csv(connection, collection_or_table_name, csv_file, query_params, exception_field=None, exceptions=None):
+    cursor = None  # Initialize cursor variable
+
+    if isinstance(connection, psycopg2.extensions.connection):
+        query = f"SELECT * FROM public.{collection_or_table_name}"
+        conditions = []
+
+        # Add query parameters if provided
+        if query_params:
+            conditions += [f"{key} = '{value}'" for key, value in query_params.items()]
+
+        # Add exceptions if provided
+        if exception_field and exceptions:
+            exclusion_list = "', '".join(exceptions)
+            conditions.append(f"{exception_field} NOT IN ('{exclusion_list}')")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += ";"
+
+        cursor = connection.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        headers = [desc[0] for desc in cursor.description]
+
+        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            writer.writerows(rows)
+
+    elif isinstance(connection, sqlite3.Connection):
+        query = f"SELECT * FROM {collection_or_table_name}"
+        conditions = []
+
+        # Add query parameters if provided
+        if query_params:
+            conditions += [f"{key} = '{value}'" for key, value in query_params.items()]
+
+        # Add exceptions if provided
+        if exception_field and exceptions:
+            exclusion_list = "', '".join(exceptions)
+            conditions.append(f"{exception_field} NOT IN ('{exclusion_list}')")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += ";"
+
+        cursor = connection.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        headers = [desc[0] for desc in cursor.description]
+
+        with open(csv_file, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            writer.writerows(rows)
+
+    else:
+        raise Exception("Unsupported database type")
+
+    if cursor:  # Check if cursor exists before attempting to close
+        cursor.close()  # Close the cursor after use
+    print(
+        f"Data from collection/table '{collection_or_table_name}' has been successfully exported to {csv_file}"
+    )
+
+
+# Function to read exceptions from a CSV or pasted text
+def read_exceptions_from_csv_or_input():
+    exceptions = []
+    exception_input_type = input("Do you want to provide exceptions via a CSV file (c) or paste data (p)? ").lower()
+
+    if exception_input_type == "c":
+        file_path = input("Enter the path to the exceptions CSV file: ")
+        if os.path.exists(file_path):
+            with open(file_path, mode="r", encoding="utf-8") as file:
+                reader = csv.reader(file)
+                exceptions = [row[0] for row in reader]  # Assuming exceptions are in the first column
+        else:
+            print("File not found. No exceptions will be applied.")
+    elif exception_input_type == "p":
+        pasted_data = input("Paste the exceptions data (one per line): ")
+        exceptions = [line.strip() for line in pasted_data.split("\n") if line.strip()]
+
+    return exceptions
+
+
+def main():
+    # Prompt the user for the type of input
+    input_type = input("Select input type (1: PSQL command, 2: Raw entry, 3: Database URI): ")
+
+    connection = None
+
+    if input_type == "1":
+        # Allow user to paste a PostgreSQL command
+        psql_command = input("Paste your PostgreSQL command: ")
+        # Extract connection details from the command (this is a placeholder, implement parsing logic)
+        # connection = parse_psql_command(psql_command)
+
+    elif input_type == "2":
+        # Basic raw entry of host, user, password, etc.
+        host = input("Enter the host: ")
+        database = input("Enter the database name: ")
+        user = input("Enter the user: ")
+        password = input("Enter the password: ")
+        connection = psycopg2.connect(host=host, database=database, user=user, password=password)
+
+    elif input_type == "3":
+        # Database URI input
+        database_uri = input("Enter your database URI: ")
         connection_params = parse_database_uri(database_uri)
         connection = psycopg2.connect(**connection_params)
+
+    else:
+        print("Invalid input type selected.")
+        return
 
     # Get table/collection names
     tables = get_table_names(connection)
@@ -186,6 +210,12 @@ def main():
             value = input(f"Enter the value for {key}: ")
             query_params[key] = value
 
+        # Prompt the user for exceptions
+        exception_field = input("Enter the column name for exclusions (or press Enter to skip): ")
+        exceptions = []
+        if exception_field:
+            exceptions = read_exceptions_from_csv_or_input()
+
         # Ask the user what type of file they want to export
         file_format = input("Do you want to export to CSV (c) or XLSX (x)? ").lower()
         if file_format not in ["c", "x"]:
@@ -200,10 +230,10 @@ def main():
 
         # Export the selected table/collection to the chosen format
         if file_format == "c":
-            export_to_csv(connection, table_name, output_file, query_params)
+            export_to_csv(connection, table_name, output_file, query_params, exception_field, exceptions)
         elif file_format == "x":
             csv_temp_file = f"{table_name}_temp.csv"
-            export_to_csv(connection, table_name, csv_temp_file, query_params)
+            export_to_csv(connection, table_name, csv_temp_file, query_params, exception_field, exceptions)
             convert_csv_to_xlsx(csv_temp_file, output_file)
             os.remove(csv_temp_file)  # Clean up temporary CSV file
         else:
